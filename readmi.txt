@@ -1,0 +1,2 @@
+
+powershell -ExecutionPolicy Bypass -File .\get-ir-cmake.ps1 -SourceDirs "main" -EmitLL

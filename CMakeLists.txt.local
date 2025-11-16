@@ -1,0 +1,2 @@
+set(ENV{IDF_CC} "clang")
+set(ENV{IDF_CLANG_TOOLS_PATH} "C:/Andrey/Programs/Espressif/Tools/esp-clang/esp-18.1.2_20240912/esp-clang") 

@@ -1,0 +1,30 @@
+{
+  "C_Cpp.intelliSenseEngine": "default",
+  "idf.espIdfPathWin": "C:/Andrey/Programs/Espressif/frameworks/esp-idf-v5.4/",
+  "idf.pythonInstallPath": "C:\\Andrey\\Programs\\Espressif\\tools\\idf-python\\3.11.2\\python.exe",
+  "idf.openOcdConfigs": [
+    "board/esp32c3-builtin.cfg"
+  ],
+  "idf.toolsPathWin": "C:\\Andrey\\Programs\\Espressif",
+  "idf.customExtraVars": {
+    "IDF_TARGET": "esp32c3",
+    "IDF_CC": "clang",
+    "IDF_CLANG_TOOLS_PATH": "C:\\Andrey\\Programs\\Espressif\\Tools\\esp-clang\\esp-18.1.2_20240912\\esp-clang"
+  },
+  "idf.useIDFKconfigStyle": true,
+  "files.associations": {
+    "random": "c",
+    "*.inc": "c",
+    "gpio.h": "c",
+    "cstdint": "c",
+    "esp_cpu.h": "c"
+  },
+  "clangd.path": "C:\\Andrey\\Programs\\Espressif\\tools\\esp-clang\\esp-18.1.2_20240912\\esp-clang\\bin\\clangd.exe",
+  "clangd.arguments": [
+    "--background-index",
+    "--query-driver=C:\\Andrey\\Programs\\Espressif\\tools\\riscv32-esp-elf\\esp-14.2.0_20241119\\riscv32-esp-elf\\bin\\riscv32-esp-elf-gcc.exe",
+    "--compile-commands-dir=c:\\Andrey\\Projects\\VS_Code\\llvm_test2\\build"
+  ],
+  "idf.flashType": "UART",
+  "idf.portWin": "COM3"
+}
