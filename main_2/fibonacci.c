@@ -93,7 +93,7 @@ void run_performance_test(void) {
 void app_main(int argc, char* argv[], char* envp[])
 {
     printf("--- ESPB app_main called! ---\n");
-    my_custom_print("-hi-");
+   // my_custom_print("-hi-");
     // argc will be 1112
     printf("Received integer (argc): %d\n", argc); 
 
