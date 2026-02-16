@@ -9,6 +9,40 @@ The project is configured to work with `clang` as the compiler and uses a custom
 1.  **Configure Environment:** Ensure all paths in the `.vscode/settings.json` and `.vscode/c_cpp_properties.json` files match your system's setup.
 2.  **Configure Build:** Add your source files and directories to `CMakeLists.txt`.
 3.  **Compile:** Execute the command in a PowerShell terminal to generate the `.bc` file.
+4.  **Enable JIT Compilation (Optional):** Mark performance-critical functions with `JIT_HOT` attribute for Just-In-Time compilation during bytecode interpretation. See [JIT Compilation](#jit-compilation) section for details.
+
+---
+
+## JIT Compilation
+
+To enable Just-In-Time (JIT) compilation for your functions, you must mark them with the `JIT_HOT` attribute. This tells the ESPB runtime to compile these functions during interpretation of the `.espb` bytecode, improving their execution performance.
+
+### Defining the JIT_HOT Macro
+
+Add the following macro definition to your code:
+
+```c
+#define JIT_HOT __attribute__((annotate("espb_jit_hot")))
+```
+
+### Marking Functions for JIT Compilation
+
+Apply the `JIT_HOT` attribute to functions that should be compiled at runtime. For example:
+
+```c
+#define JIT_HOT __attribute__((annotate("espb_jit_hot")))
+
+JIT_HOT
+__attribute__((noinline))
+static void cb_print(void *ud) {
+    printf("cb_print: user_data=%p\n", ud);
+}
+```
+
+**Important Notes:**
+- Functions marked with `JIT_HOT` will be compiled from LLVM IR to native machine code during bytecode interpretation.
+- Use `JIT_HOT` for frequently called functions to achieve significant performance improvements.
+- The `__attribute__((noinline))` is recommended to ensure the function maintains its separate compilation context.
 
 ---
 
