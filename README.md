@@ -15,7 +15,7 @@ The project is configured to work with `clang` as the compiler and uses a custom
 
 ## JIT Compilation
 
-To enable Just-In-Time (JIT) compilation for your functions, you must mark them with the `JIT_HOT` attribute. This tells the ESPB runtime to compile these functions during interpretation of the `.espb` bytecode, improving their execution performance.
+To enable Just-In-Time (JIT) compilation for your functions during interpretation, you must mark them with the `JIT_HOT` attribute. When translating code to `.espb` bytecode, functions marked with `JIT_HOT` will be compiled to native machine code by the JIT compiler when needed during interpretation, resulting in significantly faster execution compared to purely interpreted functions.
 
 ### Defining the JIT_HOT Macro
 
@@ -27,7 +27,7 @@ Add the following macro definition to your code:
 
 ### Marking Functions for JIT Compilation
 
-Apply the `JIT_HOT` attribute to functions that should be compiled at runtime. For example:
+Apply the `JIT_HOT` attribute to functions that should be JIT-compiled at runtime. For example:
 
 ```c
 #define JIT_HOT __attribute__((annotate("espb_jit_hot")))
@@ -40,9 +40,10 @@ static void cb_print(void *ud) {
 ```
 
 **Important Notes:**
-- Functions marked with `JIT_HOT` will be compiled from LLVM IR to native machine code during bytecode interpretation.
-- Use `JIT_HOT` for frequently called functions to achieve significant performance improvements.
+- Functions marked with `JIT_HOT` are compiled from LLVM IR to native machine code by the JIT compiler when called during bytecode interpretation.
+- Use `JIT_HOT` for performance-critical functions to achieve significant performance improvements over interpreted execution.
 - The `__attribute__((noinline))` is recommended to ensure the function maintains its separate compilation context.
+- JIT-compiled functions are placed in IRAM (Internal RAM), which has limited size on ESP32. Be mindful of the number and size of functions you mark with `JIT_HOT`.
 
 ---
 
