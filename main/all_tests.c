@@ -26,6 +26,10 @@
 
 #include "test.h"
 
+#define JIT_HOT __attribute__((annotate("espb_jit_hot")))
+//__attribute__((section(".jit.hot")))
+
+
 
 /*
 
@@ -52,9 +56,9 @@ extern void set_magic_number(int* out_value);
 extern void host_invoke_cb(void (*cb)(void *), void *user_data);
 extern void host_invoke_cb2(void (*cb)(int, void *), int x, void *user_data);
 
-/*
+///*
 ///------------------------------------------------
-
+/*
 // --- Host-like callback helpers ---
 typedef void (*cb1_t)(void*);
 typedef void (*cb2_t)(int, void*);
@@ -79,8 +83,9 @@ void set_magic_number(int* out_value) {
         printf("[HOST DBG] ERROR: out_value pointer is NULL!\n");
     }
 }
-///-------------------------------------------------
 */
+///-------------------------------------------------
+//*/
 
 
 //__attribute__((import_module("env"), import_name("getchat")))
@@ -97,16 +102,20 @@ bool g_my_global_bool = false;
 //*/
 ///*
 // Callback implementations inside ESPB for trampoline testing
+JIT_HOT
+__attribute__((noinline))
 static void cb_print(void *ud) {
     printf("cb_print: user_data=%p\n", ud);
 }
-
+JIT_HOT
+__attribute__((noinline))
 static void cb_with_int(int x, void *ud) {
     printf("cb_with_int: x=%d, user_data=%p\n", x, ud);
 }
 //*/
 ///*
 // FreeRTOS timer callback: user_data is stored in pvTimerID
+JIT_HOT
 static void test_timer_cb(TimerHandle_t xTimer) {
     void *ud = pvTimerGetTimerID(xTimer);
     static int tick = 0;
@@ -114,6 +123,8 @@ static void test_timer_cb(TimerHandle_t xTimer) {
 }
 //*/
 ///*
+JIT_HOT
+__attribute__((noinline))
 void counter_task(void *pvParameter)
 {
     int num = 0;
@@ -130,23 +141,31 @@ void counter_task(void *pvParameter)
 // =========================================================================
 
 // Simple functions for testing indirect calls
+JIT_HOT
+__attribute__((noinline))
 int add_func(int a, int b) {
     printf("add_func called: %d + %d = %d\n", a, b, a + b);
     return a + b;
 }
 
+JIT_HOT
+__attribute__((noinline))
 int mul_func(int a, int b) {
     printf("mul_func called: %d * %d = %d\n", a, b, a * b);
     return a * b;
 }
 
 // A function that takes a function pointer
+JIT_HOT
+__attribute__((noinline))
 int call_operation(int (*operation)(int, int), int x, int y) {
     printf("call_operation: calling function pointer with %d, %d\n", x, y);
     return operation(x, y);
 }
 
 // Main function for testing
+JIT_HOT
+__attribute__((noinline))
 void test_call_indirect() {
     printf("=== Testing CALL_INDIRECT ===\n");
 
@@ -180,23 +199,27 @@ void test_call_indirect() {
 // =========================================================================
 
 // Global array of function pointers - LLVM can't optimize this
-static int (*operations[])(int, int) = {add_func, mul_func};
 
+static int (*operations[])(int, int) = {add_func, mul_func};
+JIT_HOT
 // A function that takes an operation index (prevents optimization)
+__attribute__((noinline))
 int call_operation_by_index(int op_index, int x, int y) {
     printf("call_operation_by_index: op=%d, calling with %d, %d\n", op_index, x, y);
 
     // This indirect call cannot be optimized by LLVM
     return operations[op_index % 2](x, y);
 }
-
+JIT_HOT
 // A function with a volatile pointer (prevents optimization)
+__attribute__((noinline))
 volatile int call_volatile_function(volatile int (*func)(int, int), int x, int y) {
     printf("call_volatile_function: calling with %d, %d\n", x, y);
     return func(x, y);
 }
-
+JIT_HOT
 // Main function for testing non-optimizable calls
+__attribute__((noinline))
 void test_call_indirect_non_optimizable() {
     printf("=== Testing Non-Optimizable CALL_INDIRECT ===\n");
 
@@ -221,7 +244,8 @@ void test_call_indirect_non_optimizable() {
 // =========================================================================
 
 // --- FUNCTION FOR TESTING GLOBAL VARIABLES ---
-
+//JIT_HOT
+__attribute__((noinline))
 void test_globals() {
     printf("\n=== Testing Globals ===\n");
     printf("Initial g_my_global_int: %" PRId32 "\n", g_my_global_int);
@@ -239,13 +263,14 @@ void test_globals() {
 }
 
 // --- NEW FUNCTION FOR TESTING MATH OPERATIONS ---
-
+//JIT_HOT
+__attribute__((noinline))
 void test_math_operations32()
 {
-    volatile int32_t i32_a = -100;
+    volatile  int32_t i32_a = -100;
     volatile int32_t i32_b = 25;
-    volatile uint32_t u32_a = 100;
-    volatile uint32_t u32_b = 25;
+    volatile   uint32_t u32_a = 100;
+    volatile  uint32_t u32_b = 25;
     printf("\n--- I32 Operations ---\n");
     printf("i32_a=%d, i32_b=%d, u32_a=%u, u32_b=%u\n", i32_a, i32_b, u32_a, u32_b);
     printf("ADD: %d\n", i32_a + i32_b);
@@ -265,6 +290,8 @@ void test_math_operations32()
 
 
 }
+//JIT_HOT
+__attribute__((noinline))
 void test_math_operations() {
     printf("\n=== Testing Math Operations ===\n");
 
@@ -361,6 +388,8 @@ void test_math_operations() {
 }
 
 // --- NEW FUNCTION FOR TESTING MEMORY OPERATIONS ---
+JIT_HOT
+__attribute__((noinline))
 void test_memory_operations() {
     printf("\n=== Testing Memory Operations ===\n");
 
@@ -421,7 +450,8 @@ void test_memory_operations() {
     printf("STORE/LOAD U16: Stored %u, Loaded %u\n", 65000, loaded_u16);
     
     // --- STORE / LOAD PTR ---
-    void **p_ptr = (void**)(buffer + 50);
+    //void **p_ptr = (void**)(buffer + 50);
+      void* volatile *p_ptr = (void* volatile *)(buffer + 50); 
     void *ptr_to_store = (void*)0xDEADBEEF;
     *p_ptr = ptr_to_store;
     void *loaded_ptr = *p_ptr;
@@ -433,6 +463,8 @@ void test_memory_operations() {
 
 ///*
 // --- NEW FUNCTION FOR TESTING CONTROL FLOW ---
+JIT_HOT
+__attribute__((noinline))
 void test_control_flow() {
     printf("\n=== Testing Control Flow ===\n");
 
@@ -514,7 +546,8 @@ skip_label:
 
 
 //*/
-
+__attribute__((noinline))
+//JIT_HOT
 void MarchallingTest()
 {
     printf("--- Marshalling Test Start ---\n");
@@ -545,7 +578,8 @@ void MarchallingTest()
 }
 //-------------------------------
 //test SELECT
-
+//JIT_HOT
+__attribute__((noinline))
 void test_select_opcodes() {
     printf("\n=== Testing SELECT Opcodes ===\n");
     int condition = 1; // Condition to check the "true" path
@@ -576,6 +610,8 @@ void test_select_opcodes() {
 
 //--------------------------------
 //Specific pointer operations
+//JIT_HOT
+__attribute__((noinline))
 void test_pointer_ops() {
     printf("\n=== Testing Pointer Opcodes ===\n");
 
@@ -604,6 +640,8 @@ void test_pointer_ops() {
 //--------------------------------------
 
 // --- NEW FUNCTION FOR TESTING ATOMIC OPERATIONS ---
+//JIT_HOT
+__attribute__((noinline))
 void test_atomics() {
     printf("\n=== Testing Atomic Operations ===\n");
 
@@ -649,6 +687,8 @@ void test_atomics() {
 //------------------------------------------------------------------
 
 // --- NEW FUNCTION FOR TESTING BULK MEMORY OPERATIONS ---
+//JIT_HOT
+__attribute__((noinline))
 void test_heap_and_memory_operations() {
     printf("\n=== Testing Heap & Memory Operations ===\n");
 
@@ -736,7 +776,8 @@ void test_heap_and_memory_operations() {
     printf("=== Heap & Memory Operations test completed ===\n\n");
 }
 //--------------------------------------------------------
-
+JIT_HOT
+__attribute__((noinline))
 void test_i64_imm8_ops() {
     printf("\n=== Testing I64 IMM8 Operations (using volatile) ===\n");
 
@@ -820,6 +861,8 @@ typedef struct {
 // --- Helper functions to show argument passing ---
 
 // Prints an array (demonstrates that an array is passed as a pointer)
+JIT_HOT
+__attribute__((noinline))
 void print_int_array(int arr[], size_t size) {
     printf("  [Helper] Printing array contents: ");
     for (size_t i = 0; i < size; i++) {
@@ -829,13 +872,15 @@ void print_int_array(int arr[], size_t size) {
 }
 
 // Modifies a struct by pointer
+JIT_HOT
+__attribute__((noinline))
 void modify_sensor_by_ref(SensorData* sensor) {
     sensor->temperature += 5.0f;
     strcpy(sensor->name, "Modified Sensor");
     sensor->is_active = false;
 }
-
-
+JIT_HOT
+__attribute__((noinline))
 void test_complex_data_types() {
     printf("\n=== Testing Complex Data Types ===\n");
 
@@ -955,7 +1000,8 @@ void test_complex_data_types() {
 // =========================================================================
 // === CODE FOR TESTING WHILE AND DO-WHILE LOOPS =======================
 // =========================================================================
-
+JIT_HOT
+__attribute__((noinline))
 void test_while_and_do_while_loops() {
     printf("\n=== Testing While and Do-While Loops ===\n");
 
@@ -1035,7 +1081,8 @@ void test_while_and_do_while_loops() {
 // =========================================================================
 // === CODE FOR TESTING BREAK AND CONTINUE STATEMENTS ====================
 // =========================================================================
-
+JIT_HOT
+__attribute__((noinline))
 void test_break_and_continue() {
     printf("\n=== Testing Break and Continue Statements ===\n");
 
@@ -1121,21 +1168,26 @@ extern void OP_table_set(int table_idx, int index, int value);
 typedef int (*binary_func_t)(int, int);
 
 // Test functions to be placed in the table
+JIT_HOT
+__attribute__((noinline))
 int add_function_1(int a, int b) {
     printf("  add_function(%d, %d) called\n", a, b);
     return a + b;
 }
-
+JIT_HOT
+__attribute__((noinline))
 int multiply_function_1(int a, int b) {
     printf("  multiply_function(%d, %d) called\n", a, b);
     return a * b;
 }
-
+JIT_HOT
+__attribute__((noinline))
 int subtract_function_1(int a, int b) {
     printf("  subtract_function(%d, %d) called\n", a, b);
     return a - b;
 }
-
+JIT_HOT
+__attribute__((noinline))
 void test_table_operations() {
     printf("\n=== Testing TABLE Operations ===\n");
     
@@ -1206,7 +1258,7 @@ void test_table_operations() {
     }
     printf("=== TABLE Operations test completed ===\n\n");
 }
-
+JIT_HOT
 void test_call_indirect_with_table() {
     printf("\n=== Testing CALL_INDIRECT with TABLE ===\n");
     
@@ -1330,21 +1382,26 @@ void test_call_indirect_with_table() {
 // CALL INDIRECT PTR
 //------------------------------------------------------------
 // Simple test functions
+JIT_HOT
+__attribute__((noinline))
 int add_function(int a, int b) {
     printf("  add_function(%d, %d) called\n", a, b);
     return a + b;
 }
-
+JIT_HOT
+__attribute__((noinline))
 int multiply_function(int a, int b) {
     printf("  multiply_function(%d, %d) called\n", a, b);
     return a * b;
 }
-
+JIT_HOT
+__attribute__((noinline))
 int subtract_function(int a, int b) {
     printf("  subtract_function(%d, %d) called\n", a, b);
     return a - b;
 }
-
+JIT_HOT
+__attribute__((noinline))
 // Helper function to force a call by address
 __attribute__((noinline, optnone, noclone))
 int call_function_by_address(void* func_addr, int arg1, int arg2) {
@@ -1356,8 +1413,9 @@ int call_function_by_address(void* func_addr, int arg1, int arg2) {
     
     return unsafe_func(arg1, arg2);
 }
-
+JIT_HOT
 // Test for CALL_INDIRECT_PTR (unsafe calls by address)
+__attribute__((noinline))
 void test_call_indirect_ptr_unsafe() {
     printf("\n=== Testing CALL_INDIRECT_PTR (UNSAFE) ===\n");
     printf("This test requires ESPB_UNSAFE_MODE to be enabled\n");
@@ -1404,42 +1462,12 @@ void test_call_indirect_ptr_unsafe() {
 }
 //-----------------------------------------------------------
 //------------------------------------------------------------
-void app_main(void)
+
+JIT_HOT
+__attribute__((noinline))
+void test_first()
 {
-    TimerHandle_t t = NULL;
-    TaskHandle_t counter_task_handle = NULL;
-
-
-
-    printf("Hello world!\n\n");
-
-    test_call_indirect_ptr_unsafe();
-    test_table_operations();
-    test_call_indirect_with_table();
-    test_break_and_continue();
-    test_while_and_do_while_loops();
-     test_complex_data_types();
-   test_math_operations32();
-     test_math_operations();
-      test_i64_imm8_ops();
-     test_heap_and_memory_operations();
-      test_atomics();
-    test_select_opcodes();
-    test_pointer_ops();
-    MarchallingTest();
-      test_globals();
-
-
-
-    test_call_indirect();
-
-    test_call_indirect_non_optimizable();
-
-    test_memory_operations();
-
-   test_control_flow();
-
-    long long  a = 10;
+long long  a = 10;
     long long  b = 5;
     long long  c = 3;
 
@@ -1517,7 +1545,19 @@ void app_main(void)
     printf("d2 / d1 = %lf\n\n", d2 / d1);
     printf("--- End of double test ---\n\n");
 
- #define USE_HOST_HELPERS
+
+
+}
+JIT_HOT
+__attribute__((noinline))
+void test_second()
+{
+
+
+    TimerHandle_t t = NULL;
+    TaskHandle_t counter_task_handle = NULL;
+
+    #define USE_HOST_HELPERS
 
     // --- Test ESPB-internal callbacks via import helpers (disabled by default) ---
 #ifdef USE_HOST_HELPERS
@@ -1593,4 +1633,46 @@ void app_main(void)
         vTaskDelay(10000 / portTICK_PERIOD_MS); // 10 seconds
     }
     */
+}
+
+void app_main(void)
+{
+ 
+
+
+    printf("Hello world!\n\n");
+ 
+    test_call_indirect_ptr_unsafe();//
+    test_table_operations();//
+    test_call_indirect_with_table(); //
+    test_break_and_continue();//
+    test_while_and_do_while_loops(); //
+     test_complex_data_types();//
+   test_math_operations32(); //
+     test_math_operations(); //
+      test_i64_imm8_ops(); //
+     test_heap_and_memory_operations();//
+      test_atomics(); //
+    test_select_opcodes();//
+    test_pointer_ops();//
+    MarchallingTest();
+      test_globals();//
+
+
+
+    test_call_indirect();//
+
+    test_call_indirect_non_optimizable();//
+
+    test_memory_operations();//
+
+   test_control_flow(); //
+
+    test_first();
+
+    test_second();
+
+    // --- Define USE_HOST_HELPERS to enable host_invoke_cb tests ---
+
+
 }
