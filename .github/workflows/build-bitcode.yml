@@ -1,0 +1,41 @@
+name: Build ESPB LLVM bitcode examples
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - experiment/espb-runtime-corpus
+    paths:
+      - "examples/**"
+      - "scripts/build_bitcode.py"
+      - "CMakeLists.txt"
+      - ".github/workflows/build-bitcode.yml"
+
+jobs:
+  build-bitcode:
+    runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:v5.4.1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ESP Clang
+        shell: bash
+        run: |
+          python "$IDF_PATH/tools/idf_tools.py" install esp-clang
+          . "$IDF_PATH/export.sh"
+          echo "$PATH" >> "$GITHUB_PATH"
+          echo "IDF_PATH=$IDF_PATH" >> "$GITHUB_ENV"
+      - name: Generate LLVM bitcode
+        shell: bash
+        run: |
+          . "$IDF_PATH/export.sh"
+          for example in examples/01_integer examples/02_control_flow examples/03_memory examples/04_calls; do
+            python scripts/build_bitcode.py "$example"
+          done
+      - name: Upload bitcode corpus
+        uses: actions/upload-artifact@v4
+        with:
+          name: espb-llvm-bitcode
+          path: llvm_output/*.bc
+          if-no-files-found: error
+          retention-days: 30
