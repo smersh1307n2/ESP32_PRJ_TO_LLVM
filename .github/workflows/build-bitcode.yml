@@ -59,13 +59,13 @@ jobs:
           retention-days: 30
 
       - name: Install .NET SDK
-        if: inputs.translate_espb && env.ESPB_API_KEY != ''
+        if: (inputs.translate_espb || github.event_name == 'push') && env.ESPB_API_KEY != ''
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
 
       - name: Translate bitcode to ESPB
-        if: inputs.translate_espb && env.ESPB_API_KEY != ''
+        if: (inputs.translate_espb || github.event_name == 'push') && env.ESPB_API_KEY != ''
         shell: bash
         run: |
           git clone --depth 1 --branch experiment/espb-cli-translator https://github.com/smersh1307n2/ESPB_Desktop_Client.git tools/espb-client
@@ -76,7 +76,7 @@ jobs:
           done
 
       - name: Upload ESPB modules
-        if: inputs.translate_espb && env.ESPB_API_KEY != ''
+        if: (inputs.translate_espb || github.event_name == 'push') && env.ESPB_API_KEY != ''
         uses: actions/upload-artifact@v4
         with:
           name: espb-translated-modules
@@ -85,10 +85,10 @@ jobs:
           retention-days: 30
 
       - name: Explain translation status
-        if: ${{ !inputs.translate_espb || env.ESPB_API_KEY == '' }}
+        if: ${{ (!inputs.translate_espb && github.event_name != 'push') || env.ESPB_API_KEY == '' }}
         shell: bash
         run: |
-          if [ "${{ inputs.translate_espb }}" != "true" ]; then
+          if [ "${{ inputs.translate_espb }}" != "true" ] && [ "${{ github.event_name }}" != "push" ]; then
             if [ -n "$ESPB_API_KEY" ]; then
               echo "Translation skipped: API secret is configured; dispatch manually with translate_espb=true."
             else
