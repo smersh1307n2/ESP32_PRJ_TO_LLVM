@@ -6,7 +6,7 @@
 #define JIT_HOT __attribute__((noinline))
 #endif
 
-static uint32_t mix(uint32_t x)
+static JIT_HOT uint32_t mix(uint32_t x)
 {
     x ^= x >> 16;
     x *= 0x7feb352du;
