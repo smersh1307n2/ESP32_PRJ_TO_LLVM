@@ -21,7 +21,9 @@ jobs:
   build-bitcode:
     runs-on: ubuntu-latest
     env:
-      ESPB_API_KEY: ${{ secrets.ESPB_API_KEY || secrets.ESPB_API_KEY_1 }}
+      # Add new repository secrets to this ordered list as quota is expanded.
+      # Keys are tried in order; only quota exhaustion advances to the next key.
+      ESPB_API_KEYS: ${{ secrets.ESPB_API_KEY }},${{ secrets.ESPB_API_KEY_1 }},${{ secrets.ESPB_API_KEY_2 }}
     container:
       image: espressif/idf:v5.4.1
     steps:
@@ -59,24 +61,61 @@ jobs:
           retention-days: 30
 
       - name: Install .NET SDK
-        if: (inputs.translate_espb || github.event_name == 'push') && env.ESPB_API_KEY != ''
+        if: (inputs.translate_espb || github.event_name == 'push') && env.ESPB_API_KEYS != ',,'
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
 
-      - name: Translate bitcode to ESPB
-        if: (inputs.translate_espb || github.event_name == 'push') && env.ESPB_API_KEY != ''
+      - name: Translate bitcode to ESPB (automatic quota failover)
+        if: (inputs.translate_espb || github.event_name == 'push') && env.ESPB_API_KEYS != ',,'
         shell: bash
         run: |
+          set -euo pipefail
           git clone --depth 1 --branch experiment/espb-cli-translator https://github.com/smersh1307n2/ESPB_Desktop_Client.git tools/espb-client
           mkdir -p espb_output
+          IFS=',' read -r -a api_keys <<< "$ESPB_API_KEYS"
+          available=()
+          for key in "${api_keys[@]}"; do
+            [ -n "$key" ] && available+=("$key")
+          done
+          if [ "${#available[@]}" -eq 0 ]; then
+            echo "No ESPB API keys configured."
+            exit 1
+          fi
+
           for bc in llvm_output/01_integer_integer.bc llvm_output/02_control_flow_control_flow.bc llvm_output/03_memory_memory.bc llvm_output/04_calls_calls.bc; do
             name="$(basename "$bc" .bc)"
-            dotnet run --project tools/espb-client/ESPB.Cli/ESPB.Cli.csproj -c Release -- --bc "$bc" --out "espb_output/test_$name.espb"
+            output="espb_output/test_$name.espb"
+            translated=false
+            for index in "${!available[@]}"; do
+              log="$(mktemp)"
+              echo "Translating $bc with configured key slot $((index + 1))..."
+              if dotnet run --project tools/espb-client/ESPB.Cli/ESPB.Cli.csproj -c Release -- --bc "$bc" --out "$output" --api-key "${available[$index]}" >"$log" 2>&1; then
+                cat "$log"
+                rm -f "$log"
+                translated=true
+                break
+              fi
+
+              cat "$log"
+              if grep -Eiq 'HTTP[[:space:]]+429|429[[:space:]]|quota[[:space:]_-]*(exhausted|exceeded|limit)|request[[:space:]_-]*limit[[:space:]_-]*(reached|exceeded)|remainingRequests["[:space:]]*:[[:space:]]*0|no[[:space:]]+requests[[:space:]]+remaining' "$log"; then
+                echo "Quota exhausted for key slot $((index + 1)); trying the next configured key."
+                rm -f "$log"
+                continue
+              fi
+
+              echo "Translation failed for a non-quota reason; stopping without hiding the error."
+              rm -f "$log"
+              exit 1
+            done
+            if [ "$translated" != true ]; then
+              echo "All configured ESPB API keys are quota-exhausted; no module was produced for $bc."
+              exit 1
+            fi
           done
 
       - name: Upload ESPB modules
-        if: (inputs.translate_espb || github.event_name == 'push') && env.ESPB_API_KEY != ''
+        if: (inputs.translate_espb || github.event_name == 'push') && env.ESPB_API_KEYS != ',,'
         uses: actions/upload-artifact@v4
         with:
           name: espb-translated-modules
@@ -85,15 +124,15 @@ jobs:
           retention-days: 30
 
       - name: Explain translation status
-        if: ${{ (!inputs.translate_espb && github.event_name != 'push') || env.ESPB_API_KEY == '' }}
+        if: ${{ (!inputs.translate_espb && github.event_name != 'push') || env.ESPB_API_KEYS == ',,' }}
         shell: bash
         run: |
           if [ "${{ inputs.translate_espb }}" != "true" ] && [ "${{ github.event_name }}" != "push" ]; then
-            if [ -n "$ESPB_API_KEY" ]; then
-              echo "Translation skipped: API secret is configured; dispatch manually with translate_espb=true."
+            if [ "$ESPB_API_KEYS" != ',,' ]; then
+              echo "Translation skipped: API secrets are configured; dispatch manually with translate_espb=true."
             else
-              echo "Translation skipped: add the ESPB_API_KEY or ESPB_API_KEY_1 repository secret, then dispatch with translate_espb=true."
+              echo "Translation skipped: add ESPB_API_KEY, ESPB_API_KEY_1, or ESPB_API_KEY_2 repository secrets, then dispatch with translate_espb=true."
             fi
           else
-            echo "Translation requested but ESPB_API_KEY / ESPB_API_KEY_1 repository secret is missing."
+            echo "Translation requested but no ESPB API key repository secret is configured."
           fi
