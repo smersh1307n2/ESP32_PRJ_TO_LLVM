@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdio.h>
 
 #if defined(__clang__)
 #define JIT_HOT __attribute__((annotate("espb_jit_hot"), noinline))
@@ -22,11 +23,19 @@ JIT_HOT uint32_t espb_call_chain(uint32_t x, uint32_t rounds)
     return x;
 }
 
+static uint8_t espb_calls_reported;
+
 /* ESPB runtime entry point: exercise a chain of local calls. */
 void app_main(int32_t seed, const char *text, void *user_data)
 {
-    volatile uint32_t sink = espb_call_chain((uint32_t)seed, 12u) ^
-                             (text != 0 ? 1u : 0u) ^
+    const uint32_t result = espb_call_chain((uint32_t)seed, 12u);
+    volatile uint32_t sink = result ^ (text != 0 ? 1u : 0u) ^
                              (uint32_t)(uintptr_t)user_data;
-    (void)sink;
+    if (!espb_calls_reported) {
+        espb_calls_reported = 1;
+        if (result == 3794755490u && sink == 3794755491u)
+            printf("[ESPB_ASSERT] calls=PASS\\n");
+        else
+            printf("[ESPB_ASSERT] calls=FAIL result=%u sink=%u\\n", result, (uint32_t)sink);
+    }
 }
