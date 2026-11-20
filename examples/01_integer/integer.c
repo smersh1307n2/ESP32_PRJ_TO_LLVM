@@ -25,6 +25,6 @@ void app_main(int32_t seed, const char *text, void *user_data)
 {
     const uint32_t a = espb_integer_chain((uint32_t)seed);
     const int32_t b = espb_integer_signed(seed, (int32_t)(uintptr_t)user_data);
-    volatile uint32_t sink = a ^ (uint32_t)b ^ (text ? (uint8_t)text[0] : 0u);
+    volatile uint32_t sink = a ^ (uint32_t)b ^ (text != 0 ? 1u : 0u);
     (void)sink;
 }
