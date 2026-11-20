@@ -30,10 +30,10 @@ jobs:
         shell: bash
         run: |
           python "$IDF_PATH/tools/idf_tools.py" install esp-clang
-          CLANG="$(find /opt/esp/tools/esp-clang -type f -path "*/bin/clang" -perm -111 -print -quit)"
+          CLANG="$(find -L /opt/esp/tools/esp-clang -type f -path "*/bin/clang" -perm -111 -print -quit)"
           if [ -z "$CLANG" ]; then
             echo "ESP Clang executable not found after installation"
-            find /opt/esp/tools/esp-clang -maxdepth 6 -type f | head -n 40
+            find -L /opt/esp/tools/esp-clang -maxdepth 6 -type f -print | head -n 40 || true
             exit 1
           fi
           CLANG_BIN="$(dirname "$CLANG")"
