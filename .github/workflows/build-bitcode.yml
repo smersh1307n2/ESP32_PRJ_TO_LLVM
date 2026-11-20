@@ -30,7 +30,7 @@ jobs:
         shell: bash
         run: |
           python "$IDF_PATH/tools/idf_tools.py" install esp-clang
-          CLANG="$(find /opt/esp/tools/esp-clang -name clang -perm -111 -print -quit)"
+          CLANG="$(find /opt/esp/tools/esp-clang -type f -path "*/bin/clang" -perm -111 -print -quit)"
           if [ -z "$CLANG" ]; then
             echo "ESP Clang executable not found after installation"
             find /opt/esp/tools/esp-clang -maxdepth 6 -type f | head -n 40
@@ -66,7 +66,7 @@ jobs:
         run: |
           git clone --depth 1 --branch experiment/espb-cli-translator https://github.com/smersh1307n2/ESPB_Desktop_Client.git tools/espb-client
           mkdir -p espb_output
-          for bc in llvm_output/01_integer.bc llvm_output/02_control_flow.bc llvm_output/03_memory.bc llvm_output/04_calls.bc; do
+          for bc in llvm_output/*.bc; do
             name="$(basename "$bc" .bc)"
             dotnet run --project tools/espb-client/ESPB.Cli/ESPB.Cli.csproj -c Release -- --bc "$bc" --out "espb_output/$name.espb"
           done
