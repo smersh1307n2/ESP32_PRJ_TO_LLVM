@@ -84,6 +84,16 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Explain translation skip
-        if: inputs.translate_espb && env.ESPB_API_KEY == ''
-        run: echo "Set the ESPB_API_KEY repository secret to enable API translation."
+      - name: Explain translation status
+        if: ${{ !inputs.translate_espb || env.ESPB_API_KEY == '' }}
+        shell: bash
+        run: |
+          if [ "${{ inputs.translate_espb }}" != "true" ]; then
+            if [ -n "$ESPB_API_KEY" ]; then
+              echo "Translation skipped: API secret is configured; dispatch manually with translate_espb=true."
+            else
+              echo "Translation skipped: add the ESPB_API_KEY repository secret, then dispatch with translate_espb=true."
+            fi
+          else
+            echo "Translation requested but ESPB_API_KEY repository secret is missing."
+          fi
