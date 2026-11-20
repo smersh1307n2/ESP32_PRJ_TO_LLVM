@@ -21,7 +21,7 @@ jobs:
   build-bitcode:
     runs-on: ubuntu-latest
     env:
-      ESPB_API_KEY: ${{ secrets.ESPB_API_KEY }}
+      ESPB_API_KEY: ${{ secrets.ESPB_API_KEY || secrets.ESPB_API_KEY_1 }}
     container:
       image: espressif/idf:v5.4.1
     steps:
@@ -92,8 +92,8 @@ jobs:
             if [ -n "$ESPB_API_KEY" ]; then
               echo "Translation skipped: API secret is configured; dispatch manually with translate_espb=true."
             else
-              echo "Translation skipped: add the ESPB_API_KEY repository secret, then dispatch with translate_espb=true."
+              echo "Translation skipped: add the ESPB_API_KEY or ESPB_API_KEY_1 repository secret, then dispatch with translate_espb=true."
             fi
           else
-            echo "Translation requested but ESPB_API_KEY repository secret is missing."
+            echo "Translation requested but ESPB_API_KEY / ESPB_API_KEY_1 repository secret is missing."
           fi
