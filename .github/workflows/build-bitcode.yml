@@ -98,7 +98,7 @@ jobs:
               fi
 
               cat "$log"
-              if grep -Eiq 'HTTP[[:space:]]+429|429[[:space:]]|quota[[:space:]_-]*(exhausted|exceeded|limit)|request[[:space:]_-]*limit[[:space:]_-]*(reached|exceeded)|remainingRequests["[:space:]]*:[[:space:]]*0|no[[:space:]]+requests[[:space:]]+remaining' "$log"; then
+              if grep -Eiq 'HTTP[[:space:]]+429|429[[:space:]]|quota[[:space:]_-]*(exhausted|exceeded|limit)|request[[:space:]_-]*limit[[:space:]_-]*(reached|exceeded)|remainingRequests["[:space:]]*:[[:space:]]*0|no[[:space:]]+requests[[:space:]]+remaining|daily[[:space:]_-]*(translation[[:space:]_-]*)?limit[[:space:]_-]*(exceeded|reached)|translation[[:space:]_-]*(limit[[:space:]_-]*(exceeded|reached)|quota[[:space:]_-]*(exhausted|exceeded))' "$log"; then
                 echo "Quota exhausted for key slot $((index + 1)); trying the next configured key."
                 rm -f "$log"
                 continue
