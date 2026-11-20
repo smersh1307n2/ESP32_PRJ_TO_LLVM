@@ -35,9 +35,8 @@ def main() -> int:
         raise SystemExit(f"No C sources in {example}")
 
     clang = os.environ.get("ESPB_CLANG") or shutil.which("clang")
-    llvm_link = os.environ.get("ESPB_LLVM_LINK") or shutil.which("llvm-link")
-    if not clang or not llvm_link:
-        raise SystemExit("clang and llvm-link must be available (run IDF export.sh after installing esp-clang)")
+    if not clang:
+        raise SystemExit("clang must be available (install esp-clang and add its bin directory to PATH)")
 
     OUTPUT.mkdir(exist_ok=True)
     TEMP.mkdir(parents=True, exist_ok=True)
@@ -56,7 +55,6 @@ def main() -> int:
         original.write_text(f"idf_component_register(SRCS {cmake_sources} INCLUDE_DIRS .)\n", encoding="utf-8")
         run([sys.executable, str(Path(os.environ["IDF_PATH"]) / "tools" / "idf.py"), "reconfigure"])
         commands = json.loads((ROOT / "build" / "compile_commands.json").read_text(encoding="utf-8"))
-        outputs = []
         for source in copied:
             match = next((entry for entry in commands if Path(entry["file"]).name == source.name), None)
             if match is None:
@@ -76,12 +74,9 @@ def main() -> int:
                 if token == "-c":
                     continue
                 filtered.append(token)
-            output = OUTPUT / f"{example.name}.bc"
-            run([clang, *filtered, "-emit-llvm", "-c", "-o", str(output)])
-            outputs.append(output)
-        linked = OUTPUT / f"{example.name}_linked.bc"
-        run([llvm_link, *[str(p) for p in outputs], "-o", str(linked)])
-        print(f"BITCODE_OUTPUT={linked}")
+            output = OUTPUT / f"{example.name}_{source.stem}.bc"
+            run([clang, *filtered, "-emit-llvm", "-c", "-o", str(output)], cwd=Path(match["directory"]))
+            print(f"BITCODE_OUTPUT={output}")
     finally:
         if saved is not None:
             original.write_bytes(saved)
