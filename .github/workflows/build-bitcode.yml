@@ -30,21 +30,15 @@ jobs:
         shell: bash
         run: |
           python "$IDF_PATH/tools/idf_tools.py" install esp-clang
-          CLANG_BIN="$(find /opt/esp/tools/esp-clang -name clang -perm -111 -print -quit | xargs -r dirname)"
-          if [ -z "$CLANG_BIN" ]; then
+          CLANG="$(find /opt/esp/tools/esp-clang -name clang -perm -111 -print -quit)"
+          if [ -z "$CLANG" ]; then
             echo "ESP Clang executable not found after installation"
-            find /opt/esp/tools/esp-clang -maxdepth 5 -type f | head -n 40
+            find /opt/esp/tools/esp-clang -maxdepth 6 -type f | head -n 40
             exit 1
           fi
-          LLVM_LINK="$(find "$CLANG_BIN" -maxdepth 1 -name llvm-link -perm -111 -print -quit)"
-          if [ -z "$LLVM_LINK" ]; then
-            echo "llvm-link not found beside clang"
-            find /opt/esp/tools/esp-clang -type f -name llvm-link | head -n 20
-            exit 1
-          fi
+          CLANG_BIN="$(dirname "$CLANG")"
           echo "$CLANG_BIN" >> "$GITHUB_PATH"
-          echo "ESPB_CLANG=$CLANG_BIN/clang" >> "$GITHUB_ENV"
-          echo "ESPB_LLVM_LINK=$LLVM_LINK" >> "$GITHUB_ENV"
+          echo "ESPB_CLANG=$CLANG" >> "$GITHUB_ENV"
       - name: Generate LLVM bitcode
         shell: bash
         run: |
