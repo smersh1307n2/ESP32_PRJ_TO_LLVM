@@ -21,3 +21,12 @@ JIT_HOT uint32_t espb_call_chain(uint32_t x, uint32_t rounds)
         x = mix(x + i);
     return x;
 }
+
+/* ESPB runtime entry point: exercise a chain of local calls. */
+void app_main(int32_t seed, const char *text, void *user_data)
+{
+    volatile uint32_t sink = espb_call_chain((uint32_t)seed, 12u) ^
+                             (text ? (uint8_t)text[0] : 0u) ^
+                             (uint32_t)(uintptr_t)user_data;
+    (void)sink;
+}
