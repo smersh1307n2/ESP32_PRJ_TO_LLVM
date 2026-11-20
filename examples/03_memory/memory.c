@@ -20,10 +20,11 @@ JIT_HOT void espb_array_transform(uint32_t *data, uint32_t count, uint32_t key)
         data[i] = (data[i] ^ key) + (i * 13u);
 }
 
-/* ESPB runtime entry point: exercise stack memory and indexed loads/stores. */
+/* ESPB runtime entry point: exercise linear-memory arrays and indexed loads/stores. */
+static uint32_t values[8];
+
 void app_main(int32_t seed, const char *text, void *user_data)
 {
-    uint32_t values[8];
     for (uint32_t i = 0; i < 8; ++i)
         values[i] = (uint32_t)seed + i * 7u;
     espb_array_transform(values, 8, (uint32_t)seed ^ (uint32_t)(uintptr_t)user_data);
