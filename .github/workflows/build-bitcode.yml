@@ -72,7 +72,7 @@ jobs:
           mkdir -p espb_output
           for bc in llvm_output/01_integer_integer.bc llvm_output/02_control_flow_control_flow.bc llvm_output/03_memory_memory.bc llvm_output/04_calls_calls.bc; do
             name="$(basename "$bc" .bc)"
-            dotnet run --project tools/espb-client/ESPB.Cli/ESPB.Cli.csproj -c Release -- --bc "$bc" --out "espb_output/$name.espb"
+            dotnet run --project tools/espb-client/ESPB.Cli/ESPB.Cli.csproj -c Release -- --bc "$bc" --out "espb_output/test_$name.espb"
           done
 
       - name: Upload ESPB modules
